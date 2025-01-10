@@ -1,98 +1,113 @@
 import os
 
 
-
-
-
 '''______________ПАРСИНГ ФАЙЛА СО СПИСКОМ ХОСТОВ____________'''
 
+# Функция для чтения данных из файла 'req.txt'
 def read():
+    # Открытие файла и чтение его содержимого
     with open('files/req.txt') as obj:
-        text = obj.read()
+        text = obj.read()  # Чтение всего текста из файла
+    # Разделение текста на отдельные элементы (пробел или новая строка)
     text = text.split()
-    return(text)
+    return(text)  # Возвращаем полученный список строк
 
 
+# Функция для парсинга списка строк в формат, удобный для отправки
 def parse(text):
-    hosts = []
+    hosts = []  # Список для хранения информации о хостах
+    # Проходим по всем строкам с шагом 3, так как каждый хост представлен тремя параметрами
     for i in range(int(len(text)/3)):
-
+        # Берем первые три элемента списка (IP, hostname, cname) для каждого хоста
         host = text[0:3]
+        # Удаляем эти три элемента из исходного списка
         del(text[0:3])
 
-
+        # Добавляем хост в список hosts
         hosts.append(host)
-    return(hosts)
+    return(hosts)  # Возвращаем список с группами хостов
 
 
+# Функция для формирования и отправки POST-запросов для каждого хоста
 def req(hosts, URL, number):
-    trigger = len(hosts)
+    trigger = len(hosts)  # Определяем количество хостов
+    # Проходим по каждому хосту в списке
     for i in range(trigger):
+        # Извлекаем первые три элемента списка (IP, hostname, cname)
         host = hosts[0:3]
-        host_ip = host[0]
-        hostname = host[1]
-        cname = host[2]
+        host_ip = host[0]  # IP-адрес хоста
+        hostname = host[1]  # Имя хоста
+        cname = host[2]  # CNAME хоста
+        # Удаляем эти три элемента из списка
         del hosts[0:3]
+
+        # Формируем JSON-запрос для добавления хоста в систему (например, Zabbix)
         request = {
-            "jsonrpc": "2.0",
-            "method": "host.create",
+            "jsonrpc": "2.0",  # Версия JSON-RPC
+            "method": "host.create",  # Метод API для создания нового хоста
             "params": {
-                "host": f"{hostname}",
+                "host": f"{hostname}",  # Имя хоста
                 "interfaces": [
                     {
-                        "type": 1,
-                        "main": 1,
-                        "useip": 1,
-                        "ip": f"{host_ip}",
-                        "dns": f"{hostname}.int.sblogistica.ru",
-                        "port": "10050"
+                        "type": 1,  # Тип интерфейса (например, с использованием IP)
+                        "main": 1,  # Основной интерфейс
+                        "useip": 1,  # Используем IP
+                        "ip": f"{host_ip}",  # IP-адрес хоста
+                        "dns": f"{hostname}.int.test.ru",  # DNS хоста
+                        "port": "10050"  # Порт для мониторинга (Zabbix Agent)
                     }
                 ],
                 "groups": [
                     {
-                        "groupid": "50"
+                        "groupid": "50"  # Идентификатор группы, к которой будет относиться хост
                     }
                 ],
                 "tags": [
                     {
-                        "tag": f"Host name",
-                        "value": f"{cname}"
+                        "tag": f"Host name",  # Тег для имени хоста
+                        "value": f"{cname}"  # Значение тега (CNAME)
                     }
                 ],
                 "templates": [
                     {
-                        "templateid": "20045"
+                        "templateid": "20045"  # Идентификатор шаблона для мониторинга
                     }
                 ],
                 "macros": [
                     {
-                        "macro": "{$USER_ID}",
-                        "value": "123321"
+                        "macro": "{$USER_ID}",  # Макрос для ID пользователя
+                        "value": "123321"  # Значение макроса
                     },
                     {
-                        "macro": "{$USER_LOCATION}",
-                        "value": "0:0:0",
-                        "description": f"Хост поставлен на мониторинг по наряду {number}"
+                        "macro": "{$USER_LOCATION}",  # Макрос для местоположения
+                        "value": "0:0:0",  # Значение макроса
+                        "description": f"Хост поставлен на мониторинг по наряду {number}"  # Описание макроса с номером наряда
                     }
                 ],
-                "inventory_mode": 0,
+                "inventory_mode": 0,  # Режим инвентаризации
                 "inventory": {
-                    "macaddress_a": "01234",
+                    "macaddress_a": "01234",  # MAC-адреса для хоста
                     "macaddress_b": "56768"
                 }
             },
-            "auth": "038e1d7b1735c6a5436ee9eae095879e",
-            "id": 1
+            "auth": "038e1d7b1735c6a5436ee9eae095879e",  # Токен авторизации (пример)
+            "id": 1  # Идентификатор запроса
         }
 
+        # Используем curl для отправки POST-запроса на указанный URL
         os.system(f'curl -X POST {URL} -H Content-Type: application/json-rpc -d {request}')
 
 
+# Основная часть программы
 if __name__ == '__main__':
+    # Запрашиваем у пользователя номер наряда (для описания в макросе)
     number = input('Номер наряда: ')
+    # URL для отправки запросов (его нужно заменить на реальный)
     URL = 'URL'
+
+    # Считываем данные из файла и парсим их
     text = read()
     hosts = parse(text)
 
-
-
+    # Отправляем запросы для каждого хоста
+    req(hosts, URL, number)
